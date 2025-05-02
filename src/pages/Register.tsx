@@ -25,6 +25,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 
+interface RegisterResponse {
+  accessToken: string;
+  refreshToken: string;
+}
+
 // Form validation schema
 const registerSchema = z
   .object({
@@ -39,15 +44,14 @@ const registerSchema = z
     path: ["confirmPassword"],
   });
 
-// Type inference from schema
-type RegisterFormValues = z.infer<typeof registerSchema>;
+type FormValues = z.infer<typeof registerSchema>;
 
 const Register = () => {
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   // Initialize form
-  const form = useForm<RegisterFormValues>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
       email: "",
@@ -56,22 +60,23 @@ const Register = () => {
     },
   });
 
-  const onSubmit = async (values: RegisterFormValues) => {
+  const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
     try {
-      const response = await axios.post("http://localhost:8080/auth/register", {
-        email: values.email,
-        password: values.password,
-      });
+      const response = await axios.post<RegisterResponse>(
+        "http://localhost:8080/auth/register",
+        {
+          email: values.email,
+          password: values.password,
+        }
+      );
 
-      // Handle successful registration
       if (response.data && response.data.accessToken) {
         // Store tokens
         localStorage.setItem("accessToken", response.data.accessToken);
         localStorage.setItem("refreshToken", response.data.refreshToken);
         localStorage.setItem("userEmail", values.email);
 
-        // Set authorization header for future requests
         axios.defaults.headers.common[
           "Authorization"
         ] = `Bearer ${response.data.accessToken}`;
@@ -79,21 +84,18 @@ const Register = () => {
         toast.success("Registration successful", {
           description: "Your account has been created successfully",
         });
-
-        // Redirect to home page after successful registration
-        navigate("/");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Registration error:", error);
 
       toast.error("Registration failed", {
-        description: axios.isAxiosError(error)
-          ? error.response?.data?.message ||
-            "Could not create your account. Please try again."
-          : "An unexpected error occurred",
+        description:
+          error.response?.data?.message ||
+          "Could not create your account. Please try again.",
       });
     } finally {
       setIsLoading(false);
+      navigate("/");
     }
   };
 

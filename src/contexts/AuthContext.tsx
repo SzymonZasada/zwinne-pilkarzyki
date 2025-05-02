@@ -1,4 +1,4 @@
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import {
   createContext,
   ReactNode,
@@ -9,7 +9,6 @@ import {
 
 interface User {
   isAuthenticated: boolean;
-  email?: string;
 }
 
 interface AuthContextType {
@@ -24,27 +23,43 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+interface RefreshTokenResponse {
+  accessToken: string;
+  refreshToken: string;
+}
+
 const AuthContext = createContext<AuthContextType | null>(null);
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
+  // Sprawdzanie stanu autentykacji przy pierwszym renderowaniu
   useEffect(() => {
-    // Check if user is already logged in
-    const accessToken = localStorage.getItem("accessToken");
-    const userEmail = localStorage.getItem("userEmail");
+    const checkAuthState = () => {
+      console.log("Checking auth state...");
+      const accessToken = localStorage.getItem("accessToken");
+      console.log(
+        "Access token from localStorage:",
+        accessToken ? "Found" : "Not found"
+      );
 
-    if (accessToken) {
-      // Set default axios header
-      axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
-      setUser({
-        isAuthenticated: true,
-        email: userEmail || undefined,
-      });
-    }
+      if (accessToken) {
+        // Ustawienie nagłówka Axios
+        axios.defaults.headers.common[
+          "Authorization"
+        ] = `Bearer ${accessToken}`;
+        console.log("Setting user as authenticated");
+        setUser({ isAuthenticated: true });
+      } else {
+        console.log("No access token found, user not authenticated");
+        setUser(null);
+      }
 
-    setLoading(false);
+      setLoading(false);
+    };
+
+    checkAuthState();
   }, []);
 
   // Function to refresh token
@@ -57,10 +72,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error("No refresh token available");
       }
 
-      const response = await axios.post("http://localhost:8080/auth/refresh", {
-        email,
-        refreshToken,
-      });
+      const response = await axios.post<RefreshTokenResponse>(
+        "http://localhost:8080/auth/refresh",
+        {
+          email,
+          refreshToken,
+        }
+      );
 
       if (response.data && response.data.accessToken) {
         localStorage.setItem("accessToken", response.data.accessToken);
@@ -84,20 +102,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const interceptor = axios.interceptors.response.use(
       (response) => response,
-      async (error: AxiosError) => {
+      async (error) => {
+        // Extract original request
         const originalRequest = error.config;
 
         // If error is 401 and not a retry and we have a refresh token
         if (
           error.response?.status === 401 &&
-          originalRequest &&
           !originalRequest._retry &&
           localStorage.getItem("refreshToken")
         ) {
           originalRequest._retry = true;
 
           const refreshed = await refreshToken();
-          if (refreshed && originalRequest) {
+          if (refreshed) {
             // Retry the original request with new token
             return axios(originalRequest);
           }
@@ -114,20 +132,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = () => {
     try {
-      // Call logout endpoint if needed
       axios.post("http://localhost:8080/auth/logout");
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
-      // Clear local storage
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("userEmail");
 
-      // Clear axios header
       delete axios.defaults.headers.common["Authorization"];
 
-      // Update state
       setUser(null);
     }
   };
@@ -140,11 +154,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAuthenticated: !!user,
   };
 
+  console.log("AuthContext value:", { user, loading, isAuthenticated: !!user });
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
+  console.log("useAuth hook called, context:", context);
+
   if (context === null) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
@@ -152,10 +170,3 @@ export const useAuth = (): AuthContextType => {
 };
 
 export default AuthContext;
-
-// Add this declaration for axios config
-declare module "axios" {
-  export interface AxiosRequestConfig {
-    _retry?: boolean;
-  }
-}

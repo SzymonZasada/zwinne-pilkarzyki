@@ -25,21 +25,23 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 
-// Form validation schema
+interface LoginResponse {
+  accessToken: string;
+  refreshToken: string;
+}
+
 const loginSchema = z.object({
   email: z.string().email("Valid email address is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-// Type inference from schema
-type LoginFormValues = z.infer<typeof loginSchema>;
+type FormValues = z.infer<typeof loginSchema>;
 
 const Login = () => {
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Initialize form
-  const form = useForm<LoginFormValues>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "",
@@ -47,15 +49,17 @@ const Login = () => {
     },
   });
 
-  const onSubmit = async (values: LoginFormValues) => {
+  const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
     try {
-      const response = await axios.post("http://localhost:8080/auth/login", {
-        email: values.email,
-        password: values.password,
-      });
+      const response = await axios.post<LoginResponse>(
+        "http://localhost:8080/auth/login",
+        {
+          email: values.email,
+          password: values.password,
+        }
+      );
 
-      // Handle successful login
       if (response.data && response.data.accessToken) {
         // Store tokens
         localStorage.setItem("accessToken", response.data.accessToken);
@@ -71,17 +75,15 @@ const Login = () => {
           description: "You have been logged in successfully",
         });
 
-        // Redirect to home page
         navigate("/");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
 
       toast.error("Login failed", {
-        description: axios.isAxiosError(error)
-          ? error.response?.data?.message ||
-            "Could not authenticate. Please check your credentials."
-          : "An unexpected error occurred",
+        description:
+          error.response?.data?.message ||
+          "Could not authenticate. Please check your credentials.",
       });
     } finally {
       setIsLoading(false);
