@@ -2,7 +2,7 @@
 
 ## O projekcie
 
-Projekt "Piłkarzyki" to aplikacja webowa stworzona na zaliczenie przedmiotu "Zwinne Zarządzanie Projektami". System umożliwia rezerwację stołów do gry w piłkarzyki, ułatwiając organizację rozgrywek i zarządzanie dostępnością stołów.
+Projekt "Piłkarzyki" to aplikacja webowa stworzona na zaliczenie przedmiotu "Zwinne Zarządzanie Projektami". System umożliwia rezerwację stołu do gry w piłkarzyki, ułatwiając organizację rozgrywek i zarządzanie dostępnością stołu.
 
 ## Technologie
 
