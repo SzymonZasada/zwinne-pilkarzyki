@@ -33,6 +33,8 @@ interface RegisterResponse {
 // Form validation schema
 const registerSchema = z
   .object({
+    name: z.string().min(1, "Name is required"),
+    lastName: z.string().min(1, "Last name is required"),
     email: z.string().email("Valid email address is required"),
     password: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z
@@ -54,6 +56,8 @@ const Register = () => {
   const form = useForm<FormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
+      name: "",
+      lastName: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -66,6 +70,8 @@ const Register = () => {
       const response = await axios.post<RegisterResponse>(
         "http://localhost:8080/auth/register",
         {
+          name: values.name,
+          lastName: values.lastName,
           email: values.email,
           password: values.password,
         }
@@ -113,6 +119,32 @@ const Register = () => {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your first name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your last name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="email"
