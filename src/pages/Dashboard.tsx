@@ -103,10 +103,7 @@ const Dashboard = () => {
     } catch (error: any) {
       console.error("Error creating reservation:", error);
 
-      if (
-        error.response?.status === 400 &&
-        error.response?.data?.message?.includes("zarezerwował")
-      ) {
+      if (error.response?.status === 400) {
         toast.error("Time slot unavailable", {
           description:
             "Someone has already reserved this time slot. Please choose a different time.",
@@ -124,7 +121,6 @@ const Dashboard = () => {
     updatedReservation: UpdateReservationRequest
   ) => {
     try {
-      console.log("###");
       const response = await axios.put<Reservation>(
         "http://localhost:8080/reservations",
         updatedReservation
@@ -142,10 +138,7 @@ const Dashboard = () => {
     } catch (error: any) {
       console.error("Error updating reservation:", error);
 
-      if (
-        error.response?.status === 400 &&
-        error.response?.data?.message?.includes("zarezerwował")
-      ) {
+      if (error.response?.status === 400) {
         toast.error("Time slot unavailable", {
           description:
             "Someone has already reserved this time slot. Please choose a different time.",
