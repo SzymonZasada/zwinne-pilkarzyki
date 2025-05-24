@@ -31,16 +31,37 @@ export interface UpdateReservationRequest {
   endAt: string;
 }
 
+export interface User {
+  id: number;
+  email: string;
+  name: string;
+  lastName: string;
+}
+
 const Dashboard = () => {
   const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [showCreateForm, setShowCreateForm] = useState<boolean>(false);
   const { logout } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
+    fetchUserInfo();
     fetchReservations();
   }, []);
+
+  const fetchUserInfo = async () => {
+    try {
+      const response = await axios.get<User>("http://localhost:8080/auth/info");
+      setUser(response.data);
+    } catch (error) {
+      console.error("Error fetching user info:", error);
+      toast.error("Failed to load user information", {
+        description: "Please try refreshing the page",
+      });
+    }
+  };
 
   const fetchReservations = async () => {
     try {
@@ -81,9 +102,21 @@ const Dashboard = () => {
       setShowCreateForm(false);
     } catch (error: any) {
       console.error("Error creating reservation:", error);
-      toast.error("Failed to create reservation", {
-        description: error.response?.data?.message || "Please try again later",
-      });
+
+      if (
+        error.response?.status === 400 &&
+        error.response?.data?.message?.includes("zarezerwował")
+      ) {
+        toast.error("Time slot unavailable", {
+          description:
+            "Someone has already reserved this time slot. Please choose a different time.",
+        });
+      } else {
+        toast.error("Failed to create reservation", {
+          description:
+            error.response?.data?.message || "Please try again later",
+        });
+      }
     }
   };
 
@@ -108,9 +141,21 @@ const Dashboard = () => {
       );
     } catch (error: any) {
       console.error("Error updating reservation:", error);
-      toast.error("Failed to update reservation", {
-        description: error.response?.data?.message || "Please try again later",
-      });
+
+      if (
+        error.response?.status === 400 &&
+        error.response?.data?.message?.includes("zarezerwował")
+      ) {
+        toast.error("Time slot unavailable", {
+          description:
+            "Someone has already reserved this time slot. Please choose a different time.",
+        });
+      } else {
+        toast.error("Failed to update reservation", {
+          description:
+            error.response?.data?.message || "Please try again later",
+        });
+      }
     }
   };
 
@@ -137,7 +182,14 @@ const Dashboard = () => {
     <div className="min-h-screen bg-slate-100 p-6">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Foosball Reservations</h1>
+          <div>
+            <h1 className="text-3xl font-bold">Foosball Reservations</h1>
+            {user && (
+              <p className="text-lg text-gray-600 mt-1">
+                Hi, {user.name} {user.lastName}
+              </p>
+            )}
+          </div>
           <Button variant="outline" onClick={handleLogout}>
             Log Out
           </Button>
